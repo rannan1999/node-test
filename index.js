@@ -3,10 +3,15 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// 1. 保活 HTTP 及 index.html 访问支持
+// 1. 确保 homecontainer 目录存在
+const workDir = path.join(__dirname, 'homecontainer');
+if (!fs.existsSync(workDir)) {
+    fs.mkdirSync(workDir, { recursive: true });
+}
+
+// 2. 保活 HTTP 及 index.html 访问支持
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
-    // 如果请求根目录或 index.html，则尝试读取并返回 index.html
     if (req.url === '/' || req.url === '/index.html') {
         const filePath = path.join(__dirname, 'index.html');
         fs.readFile(filePath, (err, data) => {
@@ -19,7 +24,6 @@ const server = http.createServer((req, res) => {
             }
         });
     } else {
-        // 默认健康检查响应
         res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('OK');
     }
@@ -29,7 +33,7 @@ server.listen(PORT, () => {
     console.log(`[Server] Health check and static server listening on port ${PORT}`);
 });
 
-// 2. 内嵌 Bash 脚本（包含随机文件名进程伪装，且不会自动删除文件）
+// 3. 改进的 Bash 脚本（去掉了 /dev/null 屏蔽，方便在 Northflank 日志中排查报错）
 const bashScriptContent = `#!/usr/bin/env bash
 
 export UUID=\${UUID:-'faacf142-dee8-48c2-8558-641123eb939c'}
@@ -56,12 +60,11 @@ HY_PORT=\${HY_PORT:-''}
 NAME=\${NAME:-'MJJ'}
 PASSWORD=\$UUID
 
-# 随机进程名称生成，防止被面板进程扫描强杀
-RUN_ECH=homecontainer/app_web
-RUN_OPERA=homecontainer/app_proxy
-RUN_CF=homecontainer/app_tunnel
-RUN_NZ=homecontainer/app_agent
-RUN_SB=homecontainer/app_core
+RUN_ECH="homecontainer/app_web"
+RUN_OPERA="homecontainer/app_proxy"
+RUN_CF="homecontainer/app_tunnel"
+RUN_NZ="homecontainer/app_agent"
+RUN_SB="homecontainer/app_core"
 
 get_free_port() {
     echo \$(( ( RANDOM % 20000 ) + 10000 ))
@@ -70,45 +73,45 @@ get_free_port() {
 download_file() {
     local url=\$1
     local dest=\$2
-    if curl -sL --fail \$url -o \$dest >/dev/null 2>&1; then
-        chmod 755 \$dest >/dev/null 2>&1
+    echo "Downloading \$url -> \$dest..."
+    if curl -sL --fail "\$url" -o "\$dest"; then
+        chmod 755 "\$dest"
         return 0
     else
-        if curl -4 -sL --fail \$url -o \$dest >/dev/null 2>&1; then
-            chmod 755 \$dest >/dev/null 2>&1
+        if curl -4 -sL --fail "\$url" -o "\$dest"; then
+            chmod 755 "\$dest"
             return 0
         fi
+        echo "Error: Failed to download \$url"
         return 1
     fi
 }
 
-if [[ \$ECH_IPS != 4 && \$ECH_IPS != 6 ]]; then exit 1; fi
-if [[ \$HY_IPS != 4 && \$HY_IPS != 6 ]]; then exit 1; fi
-
 ARCH=\$(uname -m | tr '[:upper:]' '[:lower:]')
 if [[ \$ARCH == arm64 || \$ARCH == aarch64 ]]; then
-    ECH_URL=https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-arm64
-    OPERA_URL=https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.freebsd-arm64
-    CLOUDFLARED_URL=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64
-    NEZHA_URL=https://github.com/babama100/1980good/releases/download/npc/arm64agent
-    SINGBOX_URL=https://github.com/babama100/1980good/releases/download/npc/armsb
+    ECH_URL="https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-arm64"
+    OPERA_URL="https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.freebsd-arm64"
+    CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+    NEZHA_URL="https://github.com/babama100/1980good/releases/download/npc/arm64agent"
+    SINGBOX_URL="https://github.com/babama100/1980good/releases/download/npc/armsb"
 elif [[ \$ARCH == x86_64 || \$ARCH == amd64 || \$ARCH == x64 ]]; then
-    ECH_URL=https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-amd64
-    OPERA_URL=https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.linux-amd64
-    CLOUDFLARED_URL=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-    NEZHA_URL=https://github.com/babama100/1980good/releases/download/npc/amd64agent
-    SINGBOX_URL=https://github.com/babama100/1980good/releases/download/npc/amdsb
+    ECH_URL="https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-amd64"
+    OPERA_URL="https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.linux-amd64"
+    CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+    NEZHA_URL="https://github.com/babama100/1980good/releases/download/npc/amd64agent"
+    SINGBOX_URL="https://github.com/babama100/1980good/releases/download/npc/amdsb"
 else
+    echo "Unsupported architecture: \$ARCH"
     exit 1
 fi
 
-download_file \$ECH_URL \$RUN_ECH
-download_file \$OPERA_URL \$RUN_OPERA
-download_file \$CLOUDFLARED_URL \$RUN_CF
-download_file \$SINGBOX_URL \$RUN_SB
+download_file "\$ECH_URL" "\$RUN_ECH"
+download_file "\$OPERA_URL" "\$RUN_OPERA"
+download_file "\$CLOUDFLARED_URL" "\$RUN_CF"
+download_file "\$SINGBOX_URL" "\$RUN_SB"
 
 if [[ -n \$NEZHA_SERVER && -n \$NEZHA_KEY ]]; then
-    download_file \$NEZHA_URL \$RUN_NZ
+    download_file "\$NEZHA_URL" "\$RUN_NZ"
 fi
 
 if [[ -z \$WSPORT ]]; then ECHPORT=\$(get_free_port); else ECHPORT=\$WSPORT; fi
@@ -119,8 +122,9 @@ if [[ -f \$RUN_NZ && -n \$NEZHA_SERVER && -n \$NEZHA_KEY ]]; then
     tlsPorts=(443 8443 2096 2087 2083 2053)
     if [[ -n \$NEZHA_PORT ]]; then
         NEZHA_TLS=""
-        if [[ " \${tlsPorts[*]} " =~ " \${NEZHA_PORT} " ]]; then NEZHA_TLS=--tls; fi
-        \$RUN_NZ -s \${NEZHA_SERVER}:\${NEZHA_PORT} -p \${NEZHA_KEY} \${NEZHA_TLS} >/dev/null 2>&1 &
+        if [[ " \${tlsPorts[*]} " =~ " \${NEZHA_PORT} " ]]; then NEZHA_TLS="--tls"; fi
+        echo "Starting Nezha agent..."
+        \$RUN_NZ -s "\${NEZHA_SERVER}:\${NEZHA_PORT}" -p "\$NEZHA_KEY" \$NEZHA_TLS &
         disown
     else
         SERVER_HOST_PORT=\${NEZHA_SERVER##*://}
@@ -132,7 +136,8 @@ server: \${NEZHA_SERVER}
 tls: \${IS_TLS}
 uuid: \${UUID}
 EOF
-        \$RUN_NZ -c homecontainer/nezha.yaml >/dev/null 2>&1 &
+        echo "Starting Nezha agent with config..."
+        \$RUN_NZ -c homecontainer/nezha.yaml &
         disown
     fi
 fi
@@ -141,24 +146,26 @@ fi
 if [[ \$OPERA == 1 && -f \$RUN_OPERA ]]; then
     COUNTRY_UPPER=\${COUNTRY^^}
     operaport=\$(get_free_port)
-    \$RUN_OPERA -country \${COUNTRY_UPPER:-AM} -socks-mode -bind-address 127.0.0.1:\$operaport >/dev/null 2>&1 &
+    echo "Starting Opera proxy..."
+    \$RUN_OPERA -country "\${COUNTRY_UPPER:-AM}" -socks-mode -bind-address "127.0.0.1:\$operaport" &
     disown
 fi
 
 # ====== 3) ECH Server ======
 if [[ -f \$RUN_ECH ]]; then
     sleep 1
-    ECH_ARGS=(-l ws://0.0.0.0:\$ECHPORT)
-    if [[ -n \$TOKEN ]]; then ECH_ARGS+=(-token \$TOKEN); fi
-    if [[ \$OPERA == 1 ]]; then ECH_ARGS+=(-f socks5://127.0.0.1:\$operaport); fi
-    \$RUN_ECH "\${ECH_ARGS[@]}" >/dev/null 2>&1 &
+    ECH_ARGS=(-l "ws://0.0.0.0:\$ECHPORT")
+    if [[ -n \$TOKEN ]]; then ECH_ARGS+=(-token "\$TOKEN"); fi
+    if [[ \$OPERA == 1 ]]; then ECH_ARGS+=(-f "socks5://127.0.0.1:\$operaport"); fi
+    echo "Starting ECH server..."
+    \$RUN_ECH "\${ECH_ARGS[@]}" &
     disown
 fi
 
 # ====== 4) sing-box ======
 if [[ -f \$RUN_SB ]]; then
-    openssl ecparam -name prime256v1 -genkey -noout -out homecontainer/server.key >/dev/null 2>&1
-    openssl req -new -x509 -key homecontainer/server.key -out homecontainer/server.crt -subj "/CN=www.bing.com" -days 36500 >/dev/null 2>&1
+    openssl ecparam -name prime256v1 -genkey -noout -out homecontainer/server.key
+    openssl req -new -x509 -key homecontainer/server.key -out homecontainer/server.crt -subj "/CN=www.bing.com" -days 36500
 
     cat << EOF > homecontainer/singbox_config.json
 {
@@ -167,7 +174,7 @@ if [[ -f \$RUN_SB ]]; then
       "type": "hysteria2",
       "tag": "hy2-in",
       "listen": "::",
-      "listen_port": \${HY_PORT},
+      "listen_port": \${HY_PORT:-8443},
       "users": [{"password": "\${PASSWORD}"}],
       "tls": {
         "enabled": true,
@@ -187,23 +194,27 @@ if [[ -f \$RUN_SB ]]; then
   "outbounds": [{"type": "direct"}]
 }
 EOF
-    \$RUN_SB run -c homecontainer/singbox_config.json >/dev/null 2>&1 &
+    echo "Starting Sing-box..."
+    \$RUN_SB run -c homecontainer/singbox_config.json &
     disown
 fi
 
 # ====== 5) Cloudflared ======
 if [[ -f \$RUN_CF ]]; then
     if [[ -n \$ECH_ARGO_TOKEN ]]; then
-        \$RUN_CF --edge-ip-version \$ECH_IPS --protocol http2 tunnel --url http://127.0.0.1:\$ECHPORT run --token \$ECH_ARGO_TOKEN >/dev/null 2>&1 &
+        echo "Starting Cloudflared ECH tunnel..."
+        \$RUN_CF --edge-ip-version "\$ECH_IPS" --protocol http2 tunnel --url "http://127.0.0.1:\$ECHPORT" run --token "\$ECH_ARGO_TOKEN" &
         disown
     fi
 
     if [[ -n \$VLESS_ARGO_TOKEN ]]; then
-        \$RUN_CF --edge-ip-version \$ECH_IPS --protocol http2 tunnel --url http://127.0.0.1:\$VLESSPORT run --token \$VLESS_ARGO_TOKEN >/dev/null 2>&1 &
+        echo "Starting Cloudflared VLESS tunnel..."
+        \$RUN_CF --edge-ip-version "\$ECH_IPS" --protocol http2 tunnel --url "http://127.0.0.1:\$VLESSPORT" run --token "\$VLESS_ARGO_TOKEN" &
         disown
     fi
 fi
 
+echo "All services initialized. Sleeping infinity..."
 sleep infinity
 `;
 
@@ -217,5 +228,5 @@ child.stdin.write(bashScriptContent);
 child.stdin.end();
 
 child.on('close', (code) => {
-    console.log(`[System] Bash exited ${code}`);
+    console.log(`[System] Bash exited with code ${code}`);
 });
