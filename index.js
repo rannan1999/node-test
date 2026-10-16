@@ -1,18 +1,35 @@
 const { spawn } = require('child_process');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
-// 1. 保活 HTTP
+// 1. 保活 HTTP 及 index.html 访问支持
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('OK');
+    // 如果请求根目录或 index.html，则尝试读取并返回 index.html
+    if (req.url === '/' || req.url === '/index.html') {
+        const filePath = path.join(__dirname, 'index.html');
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end('index.html not found');
+            } else {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(data);
+            }
+        });
+    } else {
+        // 默认健康检查响应
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('OK');
+    }
 });
 
 server.listen(PORT, () => {
-    console.log(`[Server] Health check listening on port ${PORT}`);
+    console.log(`[Server] Health check and static server listening on port ${PORT}`);
 });
 
-// 2. 内嵌 Bash 脚本（包含随机文件名进程伪装）
+// 2. 内嵌 Bash 脚本（包含随机文件名进程伪装，且不会自动删除文件）
 const bashScriptContent = `#!/usr/bin/env bash
 
 export UUID=\${UUID:-'faacf142-dee8-48c2-8558-641123eb939c'}
