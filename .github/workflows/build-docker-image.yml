@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+  packages: write  # 核心：赋予推送包到 GHCR 的写权限
 name: Build and Push Docker Image
 
 on:
