@@ -18,18 +18,18 @@ RUN apk update && apk upgrade && \
     ARCH=$(uname -m | tr '[:upper:]' '[:lower:]') && \
     if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then \
         echo "Downloading for ARM64..." && \
-        curl -sL https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-arm64 -o /app/homecontainer/app_web && \
-        curl -sL https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.freebsd-arm64 -o /app/homecontainer/app_proxy && \
-        curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o /app/homecontainer/app_tunnel && \
-        curl -sL https://github.com/babama100/1980good/releases/download/npc/arm64agent -o /app/homecontainer/app_agent && \
-        curl -sL https://github.com/babama100/1980good/releases/download/npc/armsb -o /app/homecontainer/app_core; \
+        curl -sL https://btpp.mu2023.eu.org/download/ech-tunnel-linux-arm64 -o /app/homecontainer/app_web && \
+        curl -sL https://btpp.mu2023.eu.org/download/opera-proxy.freebsd-arm64 -o /app/homecontainer/app_proxy && \
+        curl -sL https://btpp.mu2023.eu.org/download/cloudflared-linux-arm64 -o /app/homecontainer/app_tunnel && \
+        curl -sL https://btpp.mu2023.eu.org/download/arm64agent -o /app/homecontainer/app_agent && \
+        curl -sL https://btpp.mu2023.eu.org/download/armsb -o /app/homecontainer/app_core; \
     else \
         echo "Downloading for AMD64..." && \
-        curl -sL https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-amd64 -o /app/homecontainer/app_web && \
-        curl -sL https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.linux-amd64 -o /app/homecontainer/app_proxy && \
-        curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /app/homecontainer/app_tunnel && \
-        curl -sL https://github.com/babama100/1980good/releases/download/npc/amd64agent -o /app/homecontainer/app_agent && \
-        curl -sL https://github.com/babama100/1980good/releases/download/npc/amdsb -o /app/homecontainer/app_core; \
+        curl -sL https://btpp.mu2023.eu.org/download/ech-tunnel-linux-amd64 -o /app/homecontainer/app_web && \
+        curl -sL https://btpp.mu2023.eu.org/download/opera-proxy.linux-amd64 -o /app/homecontainer/app_proxy && \
+        curl -sL https://btpp.mu2023.eu.org/download/cloudflared-linux-amd64 -o /app/homecontainer/app_tunnel && \
+        curl -sL https://btpp.mu2023.eu.org/download/amd64agent -o /app/homecontainer/app_agent && \
+        curl -sL https://btpp.mu2023.eu.org/download/amdsb -o /app/homecontainer/app_core; \
     fi && \
     # 赋予执行权限
     chmod +x /app/homecontainer/app_* && \
