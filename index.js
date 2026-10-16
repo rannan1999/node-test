@@ -3,13 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// 1. 确保 homecontainer 目录存在
-const workDir = path.join(__dirname, 'homecontainer');
-if (!fs.existsSync(workDir)) {
-    fs.mkdirSync(workDir, { recursive: true });
-}
-
-// 2. 保活 HTTP 及 index.html 访问支持
+// 1. 保活 HTTP 及 index.html 访问支持
 const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
     if (req.url === '/' || req.url === '/index.html') {
@@ -33,7 +27,7 @@ server.listen(PORT, () => {
     console.log(`[Server] Health check and static server listening on port ${PORT}`);
 });
 
-// 3. 改进的 Bash 脚本（去掉了 /dev/null 屏蔽，方便在 Northflank 日志中排查报错）
+// 2. 内嵌 Bash 脚本（直接调用已内置的二进制文件）
 const bashScriptContent = `#!/usr/bin/env bash
 
 export UUID=\${UUID:-'faacf142-dee8-48c2-8558-641123eb939c'}
@@ -69,50 +63,6 @@ RUN_SB="homecontainer/app_core"
 get_free_port() {
     echo \$(( ( RANDOM % 20000 ) + 10000 ))
 }
-
-download_file() {
-    local url=\$1
-    local dest=\$2
-    echo "Downloading \$url -> \$dest..."
-    if curl -sL --fail "\$url" -o "\$dest"; then
-        chmod 755 "\$dest"
-        return 0
-    else
-        if curl -4 -sL --fail "\$url" -o "\$dest"; then
-            chmod 755 "\$dest"
-            return 0
-        fi
-        echo "Error: Failed to download \$url"
-        return 1
-    fi
-}
-
-ARCH=\$(uname -m | tr '[:upper:]' '[:lower:]')
-if [[ \$ARCH == arm64 || \$ARCH == aarch64 ]]; then
-    ECH_URL="https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-arm64"
-    OPERA_URL="https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.freebsd-arm64"
-    CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
-    NEZHA_URL="https://github.com/babama100/1980good/releases/download/npc/arm64agent"
-    SINGBOX_URL="https://github.com/babama100/1980good/releases/download/npc/armsb"
-elif [[ \$ARCH == x86_64 || \$ARCH == amd64 || \$ARCH == x64 ]]; then
-    ECH_URL="https://github.com/webappstar/ech-hug/releases/download/3.0/ech-tunnel-linux-amd64"
-    OPERA_URL="https://github.com/Alexey71/opera-proxy/releases/download/v1.22.0/opera-proxy.linux-amd64"
-    CLOUDFLARED_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-    NEZHA_URL="https://github.com/babama100/1980good/releases/download/npc/amd64agent"
-    SINGBOX_URL="https://github.com/babama100/1980good/releases/download/npc/amdsb"
-else
-    echo "Unsupported architecture: \$ARCH"
-    exit 1
-fi
-
-download_file "\$ECH_URL" "\$RUN_ECH"
-download_file "\$OPERA_URL" "\$RUN_OPERA"
-download_file "\$CLOUDFLARED_URL" "\$RUN_CF"
-download_file "\$SINGBOX_URL" "\$RUN_SB"
-
-if [[ -n \$NEZHA_SERVER && -n \$NEZHA_KEY ]]; then
-    download_file "\$NEZHA_URL" "\$RUN_NZ"
-fi
 
 if [[ -z \$WSPORT ]]; then ECHPORT=\$(get_free_port); else ECHPORT=\$WSPORT; fi
 if [[ -z \$VLPORT ]]; then VLESSPORT=\$(get_free_port); else VLESSPORT=\$VLPORT; fi
@@ -187,7 +137,7 @@ if [[ -f \$RUN_SB ]]; then
       "tag": "vless-in",
       "listen": "::",
       "listen_port": \${VLESSPORT},
-      "users": [{"name": "\${NAME}", "uuid": "\${UUID}"}],
+      "users": [{"name": "\$NAME", "uuid": "\$UUID"}],
       "transport": {"type": "ws", "path": "/vless-argo"}
     }
   ],
