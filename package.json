@@ -1,20 +1,14 @@
 {
-  "name": "nodejs",
-  "version": "1,0,0",
-  "description": "Thsi is a node project",
+  "name": "my-app",
+  "version": "1.0.0",
+  "description": "Application for Pterodactyl",
   "main": "index.js",
-  "author": "",
-  "repository": "",
-  "license": "MIT",
-  "private": false,
   "scripts": {
-    "dev": "node index.js",
     "start": "node index.js"
   },
-  "dependencies": {
-    "axios": "latest"
-  },
-  "engines": {
-    "node": ">=14"
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
   }
 }
